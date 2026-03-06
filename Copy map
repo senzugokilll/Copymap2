@@ -1,0 +1,643 @@
+--[[
+╔══════════════════════════════════════════════════════════════════════╗
+║                                                                      ║
+║   ██████╗ ███████╗██╗  ████████╗ █████╗                            ║
+║   ██╔══██╗██╔════╝██║  ╚══██╔══╝██╔══██╗                           ║
+║   ██║  ██║█████╗  ██║     ██║   ███████║                           ║
+║   ██║  ██║██╔══╝  ██║     ██║   ██╔══██║                           ║
+║   ██████╔╝███████╗███████╗██║   ██║  ██║                           ║
+║   ╚═════╝ ╚══════╝╚══════╝╚═╝   ╚═╝  ╚═╝                           ║
+║                                                                      ║
+║          COPY MAP — COMPLETE EDITION (3 IN 1)                       ║
+║                                                                      ║
+║   BERISI:                                                            ║
+║   ✅ DeltaCopyMap Main      (clone all + progress bar)              ║
+║   ✅ DeltaCopyMap StudioLite (clone di Roblox Studio)               ║
+║   ✅ DeltaCopyMap CopyAll GUI (GUI interaktif di layar)             ║
+║                                                                      ║
+║   LOADSTRING GITHUB:                                                 ║
+║   loadstring(game:HttpGet(                                           ║
+║     "https://raw.githubusercontent.com/USERNAMEKAMU/               ║
+║      NAMAREPOKAMU/main/DeltaCopyMap_Complete.lua"                   ║
+║   ))()                                                               ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+    ⚙️  PILIH MODE DI BAWAH INI:
+    MODE = 1  →  Main Executor   (clone semua, output di console)
+    MODE = 2  →  Studio Lite     (khusus Roblox Studio)
+    MODE = 3  →  Copy All GUI    (GUI interaktif, DISARANKAN)
+]]
+
+-- ══════════════════════════════════════════════════════════════
+--  ⚙️  SET MODE DI SINI
+-- ══════════════════════════════════════════════════════════════
+local MODE = 3   -- Ganti 1, 2, atau 3
+
+-- ══════════════════════════════════════════════════════════════
+--  SERVICES
+-- ══════════════════════════════════════════════════════════════
+local Players      = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService   = game:GetService("RunService")
+local UIS          = game:GetService("UserInputService")
+
+
+
+-- ════════════════════════════════════════════════════════════════════
+--
+--   ███╗  ███╗ ██████╗ ██████╗ ███████╗     ██╗
+--   ████╗████║██╔═══██╗██╔══██╗██╔════╝    ███║
+--   ██╔████╔██║██║   ██║██║  ██║█████╗      ╚██║
+--   ██║╚██╔╝██║██║   ██║██║  ██║██╔══╝       ██║
+--   ██║ ╚═╝ ██║╚██████╔╝██████╔╝███████╗     ██║
+--   ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝     ╚═╝
+--   DELTA COPY MAP — MAIN (Executor)
+--
+-- ════════════════════════════════════════════════════════════════════
+
+local function runMain()
+
+    -- ── KONFIGURASI MAIN ──
+    local CONFIG = {
+        CloneFolderName  = "DeltaClonedMap",
+        CloneTarget      = workspace,
+        Delay            = 0,
+        ShowProgress     = true,
+        IncludeCamera    = false,
+        IncludeBaseplate = true,
+        MaxDepth         = 100,
+        AutoParent       = workspace,
+    }
+
+    local clonedCount = 0
+    local failedCount = 0
+    local startTime   = 0
+    local isRunning   = false
+
+    local function log(msg, isError)
+        local prefix = isError and "[❌ ERROR]" or "[✅ DELTA]"
+        print(prefix .. " " .. tostring(msg))
+    end
+
+    local function formatTime(seconds)
+        if seconds < 60 then
+            return string.format("%.2f detik", seconds)
+        else
+            local m = math.floor(seconds / 60)
+            local s = seconds % 60
+            return string.format("%d menit %.1f detik", m, s)
+        end
+    end
+
+    local function safeClone(instance)
+        local success, result = pcall(function()
+            return instance:Clone()
+        end)
+        if success and result then
+            return result
+        else
+            failedCount = failedCount + 1
+            return nil
+        end
+    end
+
+    local function cloneAllMap()
+        if isRunning then
+            log("Script sedang berjalan! Tunggu selesai.", true)
+            return
+        end
+
+        isRunning   = true
+        clonedCount = 0
+        failedCount = 0
+        startTime   = os.clock()
+
+        log("=== DELTA COPY MAP DIMULAI ===")
+        log("Target: " .. CONFIG.CloneTarget.Name)
+
+        local cloneFolder = Instance.new("Folder")
+        cloneFolder.Name   = CONFIG.CloneFolderName .. "_" .. os.time()
+        cloneFolder.Parent = CONFIG.AutoParent
+
+        local allObjects   = CONFIG.CloneTarget:GetChildren()
+        local totalObjects = #allObjects
+
+        log("Total objek ditemukan: " .. totalObjects)
+        log("Memulai proses clone...")
+
+        for i, obj in ipairs(allObjects) do
+            if not CONFIG.IncludeCamera and obj:IsA("Camera") then continue end
+            if not CONFIG.IncludeBaseplate and obj.Name == "Baseplate" then continue end
+
+            local cloned = safeClone(obj)
+
+            if cloned then
+                cloned.Parent = cloneFolder
+                clonedCount   = clonedCount + 1
+
+                if CONFIG.ShowProgress then
+                    local percent = math.floor((i / totalObjects) * 100)
+                    local bar = string.rep("█", math.floor(percent/5)) .. string.rep("░", 20 - math.floor(percent/5))
+                    print(string.format("[DELTA] [%s] %d%% | %d/%d | %s",
+                        bar, percent, i, totalObjects, obj.Name))
+                end
+            end
+
+            if CONFIG.Delay > 0 then task.wait(CONFIG.Delay) end
+        end
+
+        local elapsed = os.clock() - startTime
+
+        log("=================================")
+        log("✅ CLONE SELESAI!")
+        log("📦 Total berhasil  : " .. clonedCount)
+        log("❌ Total gagal     : " .. failedCount)
+        log("⏱️  Waktu           : " .. formatTime(elapsed))
+        log("📁 Disimpan ke     : " .. cloneFolder.Name)
+        log("=================================")
+
+        isRunning = false
+        return cloneFolder
+    end
+
+    local function cloneWithOffset(offsetVector)
+        offsetVector   = offsetVector or Vector3.new(0, 0, 0)
+        local folder   = cloneAllMap()
+        if not folder then return end
+        for _, obj in ipairs(folder:GetDescendants()) do
+            if obj:IsA("BasePart") then obj.CFrame = obj.CFrame + offsetVector end
+        end
+        log("Offset diterapkan: " .. tostring(offsetVector))
+        return folder
+    end
+
+    local function cloneByName(name)
+        local target = workspace:FindFirstChild(name, true)
+        if not target then log("Objek '" .. name .. "' tidak ditemukan!", true) return nil end
+        local cloned = safeClone(target)
+        if cloned then
+            cloned.Name   = cloned.Name .. "_Clone"
+            cloned.Parent = workspace
+            log("Berhasil clone: " .. name)
+            return cloned
+        end
+    end
+
+    local function clearClones()
+        local removed = 0
+        for _, obj in ipairs(workspace:GetChildren()) do
+            if string.find(obj.Name, CONFIG.CloneFolderName) then
+                obj:Destroy()
+                removed = removed + 1
+            end
+        end
+        log("Berhasil menghapus " .. removed .. " folder clone.")
+    end
+
+    -- JALANKAN
+    cloneAllMap()
+
+    -- CONTOH LAIN (uncomment):
+    -- cloneWithOffset(Vector3.new(200, 0, 0))
+    -- cloneByName("SpawnLocation")
+    -- clearClones()
+
+end -- end runMain
+
+
+
+-- ════════════════════════════════════════════════════════════════════
+--
+--   ███╗  ███╗ ██████╗ ██████╗ ███████╗    ██████╗
+--   ████╗████║██╔═══██╗██╔══██╗██╔════╝    ╚════██╗
+--   ██╔████╔██║██║   ██║██║  ██║█████╗       █████╔╝
+--   ██║╚██╔╝██║██║   ██║██║  ██║██╔══╝      ██╔═══╝
+--   ██║ ╚═╝ ██║╚██████╔╝██████╔╝███████╗    ███████╗
+--   ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝    ╚══════╝
+--   DELTA COPY MAP — STUDIO LITE
+--
+-- ════════════════════════════════════════════════════════════════════
+
+local function runStudioLite()
+
+    -- ── KONFIGURASI STUDIO LITE ──
+    local STUDIO_CONFIG = {
+        TargetFolder = "Map",        -- "workspace" untuk clone semua
+        OutputFolder = "ClonedMap",
+        OffsetX      = 0,
+        OffsetY      = 0,
+        OffsetZ      = 200,
+        ParentResult = workspace,
+        SkipList     = {"Terrain", "Camera"},
+    }
+
+    local success_count = 0
+    local fail_count    = 0
+
+    local function shouldSkip(name)
+        for _, skipName in ipairs(STUDIO_CONFIG.SkipList) do
+            if name == skipName then return true end
+        end
+        return false
+    end
+
+    local function getMapInfo()
+        local info = {totalParts=0, totalModels=0, totalScripts=0, totalLights=0}
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then info.totalParts += 1
+            elseif obj:IsA("Model") then info.totalModels += 1
+            elseif obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript") then info.totalScripts += 1
+            elseif obj:IsA("Light") then info.totalLights += 1
+            end
+        end
+        print("====== INFO MAP ======")
+        print("Total Parts   : " .. info.totalParts)
+        print("Total Models  : " .. info.totalModels)
+        print("Total Scripts : " .. info.totalScripts)
+        print("Total Lights  : " .. info.totalLights)
+        print("======================")
+        return info
+    end
+
+    local function cloneStudio()
+        print("[STUDIO LITE] =============================")
+        print("[STUDIO LITE] Delta Copy Map - Studio Mode")
+        print("[STUDIO LITE] =============================")
+
+        local source
+        if STUDIO_CONFIG.TargetFolder == "workspace" then
+            source = workspace
+        else
+            source = workspace:FindFirstChild(STUDIO_CONFIG.TargetFolder)
+            if not source then source = game:FindFirstChild(STUDIO_CONFIG.TargetFolder, true) end
+        end
+        if not source then
+            warn("[STUDIO LITE] Folder target tidak ditemukan, pakai workspace")
+            source = workspace
+        end
+
+        print("[STUDIO LITE] Cloning dari: " .. source:GetFullName())
+
+        local outputFolder    = Instance.new("Folder")
+        outputFolder.Name     = STUDIO_CONFIG.OutputFolder
+        outputFolder.Parent   = STUDIO_CONFIG.ParentResult
+
+        local offset  = Vector3.new(STUDIO_CONFIG.OffsetX, STUDIO_CONFIG.OffsetY, STUDIO_CONFIG.OffsetZ)
+        local children = source:GetChildren()
+        local total    = #children
+
+        for i, child in ipairs(children) do
+            if shouldSkip(child.Name) then
+                print("[STUDIO LITE] Skipping: " .. child.Name)
+                continue
+            end
+
+            local ok, cloned = pcall(function() return child:Clone() end)
+
+            if ok and cloned then
+                if offset ~= Vector3.new(0, 0, 0) then
+                    for _, desc in ipairs(cloned:GetDescendants()) do
+                        if desc:IsA("BasePart") then desc.CFrame = desc.CFrame + offset end
+                    end
+                    if cloned:IsA("BasePart") then cloned.CFrame = cloned.CFrame + offset end
+                end
+                cloned.Parent = outputFolder
+                success_count += 1
+                print(string.format("[STUDIO LITE] [%d/%d] ✅ %s", i, total, child.Name))
+            else
+                fail_count += 1
+                warn(string.format("[STUDIO LITE] [%d/%d] ❌ Gagal: %s", i, total, child.Name))
+            end
+        end
+
+        print("[STUDIO LITE] =============================")
+        print("[STUDIO LITE] ✅ SELESAI!")
+        print("[STUDIO LITE] Berhasil : " .. success_count)
+        print("[STUDIO LITE] Gagal    : " .. fail_count)
+        print("[STUDIO LITE] Total    : " .. total)
+        print("[STUDIO LITE] Output   : " .. outputFolder:GetFullName())
+        print("[STUDIO LITE] =============================")
+        return outputFolder
+    end
+
+    local function cloneSelected()
+        local Selection = game:GetService("Selection")
+        local selected  = Selection:Get()
+        if #selected == 0 then warn("[STUDIO LITE] Tidak ada objek yang dipilih!") return end
+
+        local folder    = Instance.new("Folder")
+        folder.Name     = "SelectedClones"
+        folder.Parent   = workspace
+
+        for _, obj in ipairs(selected) do
+            local ok, cloned = pcall(function() return obj:Clone() end)
+            if ok and cloned then
+                cloned.Parent = folder
+                print("[STUDIO LITE] Cloned: " .. obj.Name)
+            end
+        end
+        print("[STUDIO LITE] Clone selected selesai! Folder: " .. folder.Name)
+        return folder
+    end
+
+    -- JALANKAN
+    getMapInfo()
+    cloneStudio()
+    -- cloneSelected()  -- uncomment jika di Studio Plugin
+
+end -- end runStudioLite
+
+
+
+-- ════════════════════════════════════════════════════════════════════
+--
+--   ███╗  ███╗ ██████╗ ██████╗ ███████╗    ██████╗
+--   ████╗████║██╔═══██╗██╔══██╗██╔════╝    ╚════██╗
+--   ██╔████╔██║██║   ██║██║  ██║█████╗       ███╔╝
+--   ██║╚██╔╝██║██║   ██║██║  ██║██╔══╝      ╚══╝
+--   ██║ ╚═╝ ██║╚██████╔╝██████╔╝███████╗    ██╗
+--   ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝    ╚═╝
+--   DELTA COPY MAP — COPY ALL GUI
+--
+-- ════════════════════════════════════════════════════════════════════
+
+local function runCopyAllGUI()
+
+    local LocalPlayer = Players.LocalPlayer
+    local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
+
+    -- Hapus GUI lama
+    local old = PlayerGui:FindFirstChild("DeltaCopyGUI")
+    if old then old:Destroy() end
+
+    -- ── BUAT GUI ──
+    local ScreenGui            = Instance.new("ScreenGui")
+    ScreenGui.Name             = "DeltaCopyGUI"
+    ScreenGui.ResetOnSpawn     = false
+    ScreenGui.Parent           = PlayerGui
+
+    local Frame                = Instance.new("Frame")
+    Frame.Name                 = "MainFrame"
+    Frame.Size                 = UDim2.new(0, 320, 0, 420)
+    Frame.Position             = UDim2.new(0.5, -160, 0.5, -210)
+    Frame.BackgroundColor3     = Color3.fromRGB(20, 20, 30)
+    Frame.BorderSizePixel      = 0
+    Frame.Parent               = ScreenGui
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
+
+    -- Title Bar
+    local TitleBar             = Instance.new("Frame")
+    TitleBar.Size              = UDim2.new(1, 0, 0, 50)
+    TitleBar.BackgroundColor3  = Color3.fromRGB(0, 120, 255)
+    TitleBar.BorderSizePixel   = 0
+    TitleBar.Parent            = Frame
+    Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
+
+    local TitleFix             = Instance.new("Frame")
+    TitleFix.Size              = UDim2.new(1, 0, 0.5, 0)
+    TitleFix.Position          = UDim2.new(0, 0, 0.5, 0)
+    TitleFix.BackgroundColor3  = Color3.fromRGB(0, 120, 255)
+    TitleFix.BorderSizePixel   = 0
+    TitleFix.Parent            = TitleBar
+
+    local Title                = Instance.new("TextLabel")
+    Title.Size                 = UDim2.new(1, -50, 1, 0)
+    Title.Position             = UDim2.new(0, 15, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text                 = "🗺️ DELTA COPY MAP"
+    Title.TextColor3           = Color3.fromRGB(255, 255, 255)
+    Title.TextSize             = 16
+    Title.Font                 = Enum.Font.GothamBold
+    Title.TextXAlignment       = Enum.TextXAlignment.Left
+    Title.Parent               = TitleBar
+
+    local CloseBtn             = Instance.new("TextButton")
+    CloseBtn.Size              = UDim2.new(0, 35, 0, 35)
+    CloseBtn.Position          = UDim2.new(1, -42, 0.5, -17)
+    CloseBtn.BackgroundColor3  = Color3.fromRGB(255, 60, 60)
+    CloseBtn.Text              = "✕"
+    CloseBtn.TextColor3        = Color3.fromRGB(255, 255, 255)
+    CloseBtn.TextSize          = 16
+    CloseBtn.Font              = Enum.Font.GothamBold
+    CloseBtn.BorderSizePixel   = 0
+    CloseBtn.Parent            = TitleBar
+    Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8)
+    CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+    -- Status Label
+    local StatusLabel          = Instance.new("TextLabel")
+    StatusLabel.Name           = "StatusLabel"
+    StatusLabel.Size           = UDim2.new(1, -20, 0, 35)
+    StatusLabel.Position       = UDim2.new(0, 10, 0, 55)
+    StatusLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+    StatusLabel.Text           = "⏳ Siap untuk clone map..."
+    StatusLabel.TextColor3     = Color3.fromRGB(100, 220, 100)
+    StatusLabel.TextSize       = 12
+    StatusLabel.Font           = Enum.Font.Gotham
+    StatusLabel.BorderSizePixel = 0
+    StatusLabel.Parent         = Frame
+    Instance.new("UICorner", StatusLabel).CornerRadius = UDim.new(0, 8)
+
+    -- Tombol factory
+    local function createButton(text, yPos, color)
+        local btn              = Instance.new("TextButton")
+        btn.Size               = UDim2.new(1, -20, 0, 45)
+        btn.Position           = UDim2.new(0, 10, 0, yPos)
+        btn.BackgroundColor3   = color or Color3.fromRGB(0, 120, 255)
+        btn.Text               = text
+        btn.TextColor3         = Color3.fromRGB(255, 255, 255)
+        btn.TextSize           = 14
+        btn.Font               = Enum.Font.GothamBold
+        btn.BorderSizePixel    = 0
+        btn.AutoButtonColor    = true
+        btn.Parent             = Frame
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+        return btn
+    end
+
+    local BtnCloneAll     = createButton("📋 CLONE ALL MAP",         100, Color3.fromRGB(0, 140, 255))
+    local BtnCloneNoTerr  = createButton("🏔️ CLONE (No Terrain)",    155, Color3.fromRGB(30, 160, 80))
+    local BtnCloneShifted = createButton("↔️ CLONE + GESER 200 STUDS", 210, Color3.fromRGB(150, 80, 200))
+    local BtnClearClones  = createButton("🗑️ HAPUS SEMUA CLONE",     265, Color3.fromRGB(220, 60, 60))
+    local BtnInfo         = createButton("ℹ️ INFO MAP",               320, Color3.fromRGB(60, 60, 80))
+
+    local CounterLabel         = Instance.new("TextLabel")
+    CounterLabel.Name          = "CounterLabel"
+    CounterLabel.Size          = UDim2.new(1, -20, 0, 30)
+    CounterLabel.Position      = UDim2.new(0, 10, 0, 375)
+    CounterLabel.BackgroundTransparency = 1
+    CounterLabel.Text          = "Total objek di-clone: 0"
+    CounterLabel.TextColor3    = Color3.fromRGB(160, 160, 160)
+    CounterLabel.TextSize      = 11
+    CounterLabel.Font          = Enum.Font.Gotham
+    CounterLabel.Parent        = Frame
+
+    -- Draggable
+    local dragging, dragStart, startPos
+    TitleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging  = true
+            dragStart = input.Position
+            startPos  = Frame.Position
+        end
+    end)
+    TitleBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta    = input.Position - dragStart
+            Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                                       startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    -- ── FUNGSI CLONE ──
+    local totalCloned = 0
+
+    local gui = {
+        Status  = StatusLabel,
+        Counter = CounterLabel,
+    }
+
+    local function setStatus(msg, color)
+        gui.Status.Text       = msg
+        gui.Status.TextColor3 = color or Color3.fromRGB(100, 220, 100)
+    end
+
+    local function cloneMap(skipTerrain, offset)
+        offset = offset or Vector3.new(0, 0, 0)
+        setStatus("⏳ Cloning map...", Color3.fromRGB(255, 200, 50))
+
+        local folder    = Instance.new("Folder")
+        folder.Name     = "DeltaClone_" .. os.time()
+        folder.Parent   = workspace
+
+        local count  = 0
+        local failed = 0
+
+        for _, obj in ipairs(workspace:GetChildren()) do
+            if skipTerrain and obj:IsA("Terrain") then continue end
+            if string.find(obj.Name, "DeltaClone_") then continue end
+
+            local ok, cloned = pcall(function() return obj:Clone() end)
+
+            if ok and cloned then
+                if offset ~= Vector3.new(0, 0, 0) then
+                    for _, d in ipairs(cloned:GetDescendants()) do
+                        if d:IsA("BasePart") then d.CFrame = d.CFrame + offset end
+                    end
+                    if cloned:IsA("BasePart") then cloned.CFrame = cloned.CFrame + offset end
+                end
+                cloned.Parent = folder
+                count += 1
+            else
+                failed += 1
+            end
+
+            task.wait()
+        end
+
+        totalCloned += count
+        gui.Counter.Text = "Total objek di-clone: " .. totalCloned
+        setStatus(string.format("✅ Selesai! %d clone | %d gagal", count, failed),
+            Color3.fromRGB(50, 220, 100))
+        return folder
+    end
+
+    local function clearAllClones()
+        local removed = 0
+        for _, obj in ipairs(workspace:GetChildren()) do
+            if string.find(tostring(obj.Name), "DeltaClone_") then
+                obj:Destroy()
+                removed += 1
+            end
+        end
+        totalCloned          = 0
+        gui.Counter.Text     = "Total objek di-clone: 0"
+        setStatus("🗑️ " .. removed .. " folder clone dihapus!", Color3.fromRGB(255, 120, 50))
+    end
+
+    local function showMapInfo()
+        local parts, models, scripts, lights = 0, 0, 0, 0
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then parts += 1
+            elseif obj:IsA("Model") then models += 1
+            elseif obj:IsA("LuaSourceContainer") then scripts += 1
+            elseif obj:IsA("Light") then lights += 1
+            end
+        end
+        setStatus(string.format("ℹ️ Parts:%d | Models:%d | Scripts:%d | Lights:%d",
+            parts, models, scripts, lights), Color3.fromRGB(150, 200, 255))
+    end
+
+    -- ── EVENTS ──
+    BtnCloneAll.MouseButton1Click:Connect(function()
+        task.spawn(cloneMap, false, Vector3.new(0, 0, 0))
+    end)
+    BtnCloneNoTerr.MouseButton1Click:Connect(function()
+        task.spawn(cloneMap, true, Vector3.new(0, 0, 0))
+    end)
+    BtnCloneShifted.MouseButton1Click:Connect(function()
+        task.spawn(cloneMap, false, Vector3.new(0, 0, 200))
+    end)
+    BtnClearClones.MouseButton1Click:Connect(function()
+        clearAllClones()
+    end)
+    BtnInfo.MouseButton1Click:Connect(function()
+        showMapInfo()
+    end)
+
+    print("[DELTA] GUI berhasil dibuat! Cek layar kamu.")
+
+end -- end runCopyAllGUI
+
+
+
+-- ════════════════════════════════════════════════════════════════════
+--   🚀 ENTRY POINT — jalankan sesuai MODE
+-- ════════════════════════════════════════════════════════════════════
+
+if MODE == 1 then
+    print("[DELTA] Menjalankan: MAIN EXECUTOR")
+    runMain()
+elseif MODE == 2 then
+    print("[DELTA] Menjalankan: STUDIO LITE")
+    runStudioLite()
+elseif MODE == 3 then
+    print("[DELTA] Menjalankan: COPY ALL GUI")
+    runCopyAllGUI()
+else
+    warn("[DELTA] MODE tidak valid! Isi MODE = 1, 2, atau 3 di bagian atas script.")
+end
+
+--[[
+════════════════════════════════════════════════════════════════
+  CARA JADIKAN LOADSTRING DI GITHUB
+════════════════════════════════════════════════════════════════
+
+  1. Buka github.com → buat repository baru (Public)
+  2. Upload file ini: DeltaCopyMap_Complete.lua
+  3. Buka file → klik tombol "Raw" → copy URL
+     Contoh URL raw:
+     https://raw.githubusercontent.com/USERNAMEKAMU/NAMAREPOKAMU/main/DeltaCopyMap_Complete.lua
+
+  4. Jalankan di executor:
+     loadstring(game:HttpGet("URL_RAW_KAMU"))()
+
+════════════════════════════════════════════════════════════════
+  PANDUAN MODE:
+    MODE = 1  →  Clone semua map, progress bar di console
+    MODE = 2  →  Studio Lite, clone di Roblox Studio
+    MODE = 3  →  GUI interaktif di layar (DISARANKAN)
+
+  TOMBOL GUI (MODE 3):
+    📋 CLONE ALL MAP       → Clone seluruh workspace
+    🏔️ CLONE No Terrain   → Clone tanpa terrain
+    ↔️ CLONE + GESER 200  → Clone dengan offset posisi
+    🗑️ HAPUS SEMUA        → Hapus semua folder clone
+    ℹ️ INFO MAP            → Tampilkan info jumlah objek
+    GUI bisa di-drag!
+════════════════════════════════════════════════════════════════
+]]
